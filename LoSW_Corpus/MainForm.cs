@@ -12,7 +12,8 @@ namespace LoSW_Corpus
         private enum SentenceBoundaryDetectionTool
         {
             SpacySentencizer,
-            PySBD
+            PySBD,
+            Multilang
         }
 
         private enum SentenceMethod
@@ -40,6 +41,7 @@ namespace LoSW_Corpus
 
             m_toolComboBox.Items.Add(SentenceBoundaryDetectionTool.SpacySentencizer);
             m_toolComboBox.Items.Add(SentenceBoundaryDetectionTool.PySBD);
+            m_toolComboBox.Items.Add(SentenceBoundaryDetectionTool.Multilang);
             m_toolComboBox.SelectedItem = m_sbdTool;
         }
 
@@ -78,7 +80,16 @@ namespace LoSW_Corpus
 
                     foreach (PyObject sentence in result)
                     {
-                        dynamic doc = m_sbdModule.get_doc_text(sentence, language);
+                        dynamic doc;
+                        try
+                        {
+                            doc = m_sbdModule.get_doc_text(sentence, language);
+                        }
+                        catch
+                        {
+                            MessageBox.Show("Токенизація не підтримує цю мову: " + language, "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
 
                         int size = 0;
                         foreach (dynamic token in doc)
@@ -113,30 +124,11 @@ namespace LoSW_Corpus
 
                     double averageLength = totalLength / totalCount;
 
-                    //// Calculate the variance
-                    //double varianceSum = 0;
-
-                    //foreach (var kvp in sentenceSizeFrequency)
-                    //{
-                    //    varianceSum += kvp.Value * Math.Pow(kvp.Key - averageLength, 2);
-                    //}
-
-                    //double variance = varianceSum / totalCount;
-
-                    //// Calculate the standard deviation
-                    //double standardDeviation = Math.Sqrt(variance);
-
-                    //// Calculate the standard error
-                    //double standardError = standardDeviation / Math.Sqrt(totalCount);
-
                     m_fileGrid[m_fileGridCount.Index, rowIndex].Value = sentenceCount;
                     m_fileGrid[m_fileGridAverage.Index, rowIndex].Value = averageLength;
 
                     break;
             }
-
-
-            MessageBox.Show("Test");
         }
 
         private void SentencesByWordsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -167,6 +159,11 @@ namespace LoSW_Corpus
                                 MessageBox.Show("Помилка", "PySBD не підтримує мову: " + language, MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 break;
                             }
+                            break;
+                        case SentenceBoundaryDetectionTool.Multilang:
+
+                            dynamic msentences = m_sbdModule.multi_lang(fileEntry.FilePath);
+                            this.ProcessSentences(new SBDResult(msentences), row.Index, language, SentenceMethod.ByWords);
                             break;
                     }
                 }

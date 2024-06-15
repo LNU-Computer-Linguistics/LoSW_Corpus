@@ -1,8 +1,9 @@
 import spacy
 import pysbd
 
-models = {}
+from punctuators.models import SBDModelONNX
 
+models = {}
 def get_doc_text(text, language):
     if language not in models:
         models[language] = spacy.blank(language)
@@ -10,6 +11,18 @@ def get_doc_text(text, language):
     doc = npl(text)
     return doc
 
+
+def multi_lang(file_path):
+    text = ""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        text = file.read()
+
+    m = SBDModelONNX.from_pretrained("sbd_multi_lang")
+
+    texts = [ text ]
+    result = m.infer(texts)
+    
+    return result[0]
 
 def pysbd_segmenter(file_path, language):
     text = ""
@@ -34,3 +47,9 @@ def spacy_sentencizer(file_path, language, punct_chars):
 
     doc_sentencizer = nlp_sentencizer(text)
     return doc_sentencizer.sents
+
+
+if (__name__ == "__main__"):
+    res = multi_lang("F:\\University\\Лінгвістика\\Random Texts\\japaneseお目出たき人 by Saneatsu Mushanokoji.txt")
+    for r in res:
+        print(res)
