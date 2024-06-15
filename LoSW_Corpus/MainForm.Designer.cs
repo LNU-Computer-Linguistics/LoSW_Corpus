@@ -44,6 +44,10 @@
             m_fileGridTextName = new DataGridViewTextBoxColumn();
             m_fileGridTextFileSize = new DataGridViewTextBoxColumn();
             m_fileGridLanguage = new DataGridViewTextBoxColumn();
+            m_fileGridCount = new DataGridViewTextBoxColumn();
+            m_fileGridAverage = new DataGridViewTextBoxColumn();
+            m_toolComboBox = new ComboBox();
+            toolLabel = new Label();
             mainMenuStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)m_fileGrid).BeginInit();
             SuspendLayout();
@@ -53,7 +57,7 @@
             mainMenuStrip.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, findLengthToolStripMenuItem });
             mainMenuStrip.Location = new Point(0, 0);
             mainMenuStrip.Name = "mainMenuStrip";
-            mainMenuStrip.Size = new Size(698, 24);
+            mainMenuStrip.Size = new Size(897, 24);
             mainMenuStrip.TabIndex = 0;
             mainMenuStrip.Text = "mainMenuStrip";
             // 
@@ -134,10 +138,10 @@
             m_fileGrid.AllowUserToAddRows = false;
             m_fileGrid.AllowUserToDeleteRows = false;
             m_fileGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            m_fileGrid.Columns.AddRange(new DataGridViewColumn[] { m_fileGridTextName, m_fileGridTextFileSize, m_fileGridLanguage });
+            m_fileGrid.Columns.AddRange(new DataGridViewColumn[] { m_fileGridTextName, m_fileGridTextFileSize, m_fileGridLanguage, m_fileGridCount, m_fileGridAverage });
             m_fileGrid.Location = new Point(12, 130);
             m_fileGrid.Name = "m_fileGrid";
-            m_fileGrid.Size = new Size(674, 239);
+            m_fileGrid.Size = new Size(874, 239);
             m_fileGrid.TabIndex = 1;
             // 
             // m_fileGridTextName
@@ -158,11 +162,43 @@
             m_fileGridLanguage.Name = "m_fileGridLanguage";
             m_fileGridLanguage.Width = 150;
             // 
+            // m_fileGridCount
+            // 
+            m_fileGridCount.HeaderText = "Кількість в тексті";
+            m_fileGridCount.Name = "m_fileGridCount";
+            m_fileGridCount.ReadOnly = true;
+            // 
+            // m_fileGridAverage
+            // 
+            m_fileGridAverage.HeaderText = "Середня довжина";
+            m_fileGridAverage.Name = "m_fileGridAverage";
+            m_fileGridAverage.ReadOnly = true;
+            // 
+            // m_toolComboBox
+            // 
+            m_toolComboBox.FormattingEnabled = true;
+            m_toolComboBox.Location = new Point(178, 53);
+            m_toolComboBox.Name = "m_toolComboBox";
+            m_toolComboBox.Size = new Size(121, 23);
+            m_toolComboBox.TabIndex = 2;
+            m_toolComboBox.SelectedIndexChanged += AlgoComboBox_SelectedIndexChanged;
+            // 
+            // toolLabel
+            // 
+            toolLabel.AutoSize = true;
+            toolLabel.Location = new Point(12, 56);
+            toolLabel.Name = "toolLabel";
+            toolLabel.Size = new Size(160, 15);
+            toolLabel.TabIndex = 3;
+            toolLabel.Text = "Інструкмент розділу речень";
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(698, 389);
+            ClientSize = new Size(897, 389);
+            Controls.Add(toolLabel);
+            Controls.Add(m_toolComboBox);
             Controls.Add(m_fileGrid);
             Controls.Add(mainMenuStrip);
             MainMenuStrip = mainMenuStrip;
@@ -182,9 +218,6 @@
         private ToolStripMenuItem openFolderToolStripMenuItem;
         private ToolStripMenuItem openFilesToolStripMenuItem;
         private DataGridView m_fileGrid;
-        private DataGridViewTextBoxColumn m_fileGridTextName;
-        private DataGridViewTextBoxColumn m_fileGridTextFileSize;
-        private DataGridViewTextBoxColumn m_fileGridLanguage;
         private ToolStripMenuItem findLengthToolStripMenuItem;
         private ToolStripMenuItem sentencesByToolStripMenuItem;
         private ToolStripMenuItem sentencesBySymbolsToolStripMenuItem;
@@ -193,5 +226,12 @@
         private ToolStripMenuItem wordsByToolStripMenuItem;
         private ToolStripMenuItem wordsBySymbolsToolStripMenuItem;
         private ToolStripMenuItem wordsByLettersToolStripMenuItem;
+        private DataGridViewTextBoxColumn m_fileGridTextName;
+        private DataGridViewTextBoxColumn m_fileGridTextFileSize;
+        private DataGridViewTextBoxColumn m_fileGridLanguage;
+        private DataGridViewTextBoxColumn m_fileGridCount;
+        private DataGridViewTextBoxColumn m_fileGridAverage;
+        private ComboBox m_toolComboBox;
+        private Label toolLabel;
     }
 }

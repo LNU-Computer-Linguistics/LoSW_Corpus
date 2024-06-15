@@ -6,6 +6,8 @@ def init():
     language_detection_processor = spacy.blank("en")
     language_detection_processor.add_pipe("language_detector")
 
+def is_init():
+    return 'language_detection_processor' in globals()
 
 """
 Only analyzes the first 100 characters.
@@ -19,7 +21,7 @@ def detect_language(file_path):
     if not chunk:
         raise Exception("[LanguageDetect] File seems to be empty")
 
-    if 'language_detection_processor' not in globals():
+    if not is_init():
         init()
 
     doc = language_detection_processor(chunk)

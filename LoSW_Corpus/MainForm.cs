@@ -1,4 +1,5 @@
-using Python.Runtime;
+﻿using Python.Runtime;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Text;
 using static System.Net.Mime.MediaTypeNames;
@@ -7,6 +8,19 @@ namespace LoSW_Corpus
 {
     public partial class MainForm : Form
     {
+
+        private enum SentenceBoundaryDetectionTool
+        {
+            SpacySentencizer,
+            PySBD
+        }
+
+        private enum SentenceMethod
+        {
+            ByWords,
+            BySymbols,
+            ByLetters,
+        }
 
         public MainForm()
         {
@@ -23,16 +37,15 @@ namespace LoSW_Corpus
 
             m_languageDetectModule = Py.Import("LanguageDetect");
             m_sbdModule = Py.Import("SentenceBoundaryDetection");
+
+            m_toolComboBox.Items.Add(SentenceBoundaryDetectionTool.SpacySentencizer);
+            m_toolComboBox.Items.Add(SentenceBoundaryDetectionTool.PySBD);
+            m_toolComboBox.SelectedItem = m_sbdTool;
         }
 
         ~MainForm()
         {
             PythonEngine.Shutdown();
-        }
-
-        private enum SentenceBoundaryDetectionTool
-        {
-            SpacySentencizer
         }
 
         private dynamic m_sbdModule;
@@ -54,38 +67,76 @@ namespace LoSW_Corpus
             m_fileGrid[m_fileGridLanguage.Index, currentRow].Value = this.DetectLanguage(filePath);
         }
 
-        private void OpenFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ProcessSentences(SBDResult result, int rowIndex, string language, SentenceMethod method)
         {
-            m_fileGrid.Rows.Clear();
-
-            string[] selectedFiles;
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            switch (method)
             {
-                openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-                openFileDialog.FilterIndex = 1;
-                openFileDialog.Multiselect = true;
+                case SentenceMethod.ByWords:
 
-                if (openFileDialog.ShowDialog() != DialogResult.OK)
-                {
-                    return;
-                }
+                    int sentenceCount = 0;
+                    Dictionary<int, int> sentenceSizeFrequency = new Dictionary<int, int>();
 
-                selectedFiles = openFileDialog.FileNames;
+                    foreach (PyObject sentence in result)
+                    {
+                        dynamic doc = m_sbdModule.get_doc_text(sentence, language);
+
+                        int size = 0;
+                        foreach (dynamic token in doc)
+                        {
+                            if (token.is_punct)
+                            {
+                                continue;
+                            }
+
+                            size += 1;
+                        }
+
+                        if (!sentenceSizeFrequency.ContainsKey(size))
+                        {
+                            sentenceSizeFrequency[size] = 0;
+                        }
+
+                        sentenceSizeFrequency[size] += 1;
+
+                        sentenceCount += 1;
+                    }
+
+                    // Calculate the average sentence length
+                    double totalLength = 0;
+                    double totalCount = 0;
+
+                    foreach (var kvp in sentenceSizeFrequency)
+                    {
+                        totalLength += kvp.Key * kvp.Value;
+                        totalCount += kvp.Value;
+                    }
+
+                    double averageLength = totalLength / totalCount;
+
+                    //// Calculate the variance
+                    //double varianceSum = 0;
+
+                    //foreach (var kvp in sentenceSizeFrequency)
+                    //{
+                    //    varianceSum += kvp.Value * Math.Pow(kvp.Key - averageLength, 2);
+                    //}
+
+                    //double variance = varianceSum / totalCount;
+
+                    //// Calculate the standard deviation
+                    //double standardDeviation = Math.Sqrt(variance);
+
+                    //// Calculate the standard error
+                    //double standardError = standardDeviation / Math.Sqrt(totalCount);
+
+                    m_fileGrid[m_fileGridCount.Index, rowIndex].Value = sentenceCount;
+                    m_fileGrid[m_fileGridAverage.Index, rowIndex].Value = averageLength;
+
+                    break;
             }
 
-            if (selectedFiles == null)
-            {
-                return; 
-            }
 
-            using (Py.GIL())
-            {
-
-                foreach (var file in selectedFiles)
-                {
-                    this.PreprocessFile(file);
-                }
-            }
+            MessageBox.Show("Test");
         }
 
         private void SentencesByWordsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -102,10 +153,19 @@ namespace LoSW_Corpus
                     {
                         case SentenceBoundaryDetectionTool.SpacySentencizer:
                             dynamic sents = m_sbdModule.spacy_sentencizer(fileEntry.FilePath, language, this.GetPunctList(language));
-                            
-                            foreach (dynamic sent in sents)
+
+                            this.ProcessSentences(new SBDSpacySentencizerResult(sents), row.Index, language, SentenceMethod.ByWords);
+                            break;
+                        case SentenceBoundaryDetectionTool.PySBD:
+
+                            try
                             {
-                                MessageBox.Show((string)sent.text);
+                                dynamic sentences = m_sbdModule.pysbd_segmenter(fileEntry.FilePath, language);
+                                this.ProcessSentences(new SBDResult(sentences), row.Index, language, SentenceMethod.ByWords);
+                            }
+                            catch {
+                                MessageBox.Show("Помилка", "PySBD не підтримує мову: " + language, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                break;
                             }
                             break;
                     }
@@ -133,6 +193,81 @@ namespace LoSW_Corpus
             }
         }
 
+        private void OpenFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            m_fileGrid.Rows.Clear();
+
+            string[] selectedFiles;
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 1;
+                openFileDialog.Multiselect = true;
+
+                if (openFileDialog.ShowDialog() != DialogResult.OK)
+                {
+                    return;
+                }
+
+                selectedFiles = openFileDialog.FileNames;
+            }
+
+            if (selectedFiles == null)
+            {
+                return;
+            }
+
+            using (Py.GIL())
+            {
+
+                foreach (var file in selectedFiles)
+                {
+                    this.PreprocessFile(file);
+                }
+            }
+        }
+
+        /**
+         * The data we get from Python code can be different depending on the used library.
+         * Passing around a dynamic variable can lead to a lot of unpredicteable code.
+         * SBDResult wraps around the result we get and make it easy to read the data.
+         */
+        private class SBDResult : IEnumerable<PyObject>
+        {
+            protected dynamic m_result;
+
+            public SBDResult(dynamic result)
+            {
+                m_result = result;
+            }
+
+            public virtual IEnumerator<PyObject> GetEnumerator()
+            {
+                foreach (dynamic result in m_result)
+                {
+                    yield return (PyObject)result;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return this.GetEnumerator();
+            }
+        }
+
+        private class SBDSpacySentencizerResult : SBDResult
+        {
+            public SBDSpacySentencizerResult(dynamic result) : base(result) { }
+
+            public override IEnumerator<PyObject> GetEnumerator()
+            {
+                foreach (dynamic result in m_result)
+                {
+                    yield return (PyObject)result.text;
+                }
+            }
+        }
+
         /**
          * Used to store the full file path, but only show the name on the grid.
          */
@@ -151,6 +286,11 @@ namespace LoSW_Corpus
             {
                 return Path.GetFileName(m_filePath);
             }
+        }
+
+        private void AlgoComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            m_sbdTool = (SentenceBoundaryDetectionTool)m_toolComboBox.SelectedItem;
         }
     }
 }
