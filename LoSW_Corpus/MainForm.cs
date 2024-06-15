@@ -131,7 +131,7 @@ namespace LoSW_Corpus
             }
         }
 
-        private void SentencesByWordsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ProcessFiles(SentenceMethod method)
         {
             using (Py.GIL())
             {
@@ -141,33 +141,40 @@ namespace LoSW_Corpus
                     FilePathGridEntry fileEntry = (FilePathGridEntry)m_fileGrid[m_fileGridTextName.Index, row.Index].Value;
                     string language = (string)m_fileGrid[m_fileGridLanguage.Index, row.Index].Value;
 
-                    switch (m_sbdTool)
+                    try
                     {
-                        case SentenceBoundaryDetectionTool.SpacySentencizer:
-                            dynamic sents = m_sbdModule.spacy_sentencizer(fileEntry.FilePath, language, this.GetPunctList(language));
 
-                            this.ProcessSentences(new SBDSpacySentencizerResult(sents), row.Index, language, SentenceMethod.ByWords);
-                            break;
-                        case SentenceBoundaryDetectionTool.PySBD:
+                        switch (m_sbdTool)
+                        {
+                            case SentenceBoundaryDetectionTool.SpacySentencizer:
+                                dynamic sents = m_sbdModule.spacy_sentencizer(fileEntry.FilePath, language, this.GetPunctList(language));
 
-                            try
-                            {
-                                dynamic sentences = m_sbdModule.pysbd_segmenter(fileEntry.FilePath, language);
-                                this.ProcessSentences(new SBDResult(sentences), row.Index, language, SentenceMethod.ByWords);
-                            }
-                            catch {
-                                MessageBox.Show("Помилка", "PySBD не підтримує мову: " + language, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                this.ProcessSentences(new SBDSpacySentencizerResult(sents), row.Index, language, method);
                                 break;
-                            }
-                            break;
-                        case SentenceBoundaryDetectionTool.Multilang:
+                            case SentenceBoundaryDetectionTool.PySBD:
 
-                            dynamic msentences = m_sbdModule.multi_lang(fileEntry.FilePath);
-                            this.ProcessSentences(new SBDResult(msentences), row.Index, language, SentenceMethod.ByWords);
-                            break;
+                                dynamic sentences = m_sbdModule.pysbd_segmenter(fileEntry.FilePath, language);
+                                this.ProcessSentences(new SBDResult(sentences), row.Index, language, method);
+                                break;
+                            case SentenceBoundaryDetectionTool.Multilang:
+
+                                dynamic msentences = m_sbdModule.multi_lang(fileEntry.FilePath);
+                                this.ProcessSentences(new SBDResult(msentences), row.Index, language, method);
+                                break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Вибраний інструмент не підтримує мову: " + language, "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        continue;
                     }
                 }
             }
+        }
+
+        private void SentencesByWordsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ProcessFiles(SentenceMethod.ByWords);
         }
 
         private PyList GetPunctList(string language)
@@ -182,11 +189,26 @@ namespace LoSW_Corpus
                 return list;
             }
 
+            var defaultList = Convert([".", "!", "?", "\n", "...", "…"]);
+
             switch (language)
             {
                 case "en":
                 default:
-                    return Convert([".", "!", "?", "\n"]);
+                    return defaultList;
+                case "es":
+                    defaultList.Append(Convert(["¿", "¡"]));
+                    return defaultList;
+                case "zh":
+                case "ja":
+                    defaultList.Append(Convert(["。", "！", "？"]));
+                    return defaultList;
+                case "fa":
+                    defaultList.Append(Convert(["،", "؟"]));
+                    return defaultList;
+                case "hi":
+                    defaultList.Append(Convert([".", "!", "?", "\n", "।"]));
+                    return defaultList;
             }
         }
 
